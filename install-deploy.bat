@@ -1,0 +1,1 @@
+mvn -Prelease-all -DskipTests clean install deploy -U

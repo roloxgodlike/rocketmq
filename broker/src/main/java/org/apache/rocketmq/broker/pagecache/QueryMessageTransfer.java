@@ -16,31 +16,34 @@
  */
 package org.apache.rocketmq.broker.pagecache;
 
-import io.netty.channel.FileRegion;
-import io.netty.util.AbstractReferenceCounted;
 import java.io.IOException;
 import java.nio.ByteBuffer;
 import java.nio.channels.WritableByteChannel;
 import java.util.List;
+
 import org.apache.rocketmq.store.QueryMessageResult;
 
+import io.netty.channel.FileRegion;
+import io.netty.util.AbstractReferenceCounted;
+
 public class QueryMessageTransfer extends AbstractReferenceCounted implements FileRegion {
-    private final ByteBuffer byteBufferHeader;
+    private final ByteBuffer         byteBufferHeader;
     private final QueryMessageResult queryMessageResult;
 
     /**
      * Bytes which were transferred already.
      */
-    private long transferred;
+    private long                     transferred;
 
-    public QueryMessageTransfer(ByteBuffer byteBufferHeader, QueryMessageResult queryMessageResult) {
+    public QueryMessageTransfer(final ByteBuffer byteBufferHeader,
+                                final QueryMessageResult queryMessageResult) {
         this.byteBufferHeader = byteBufferHeader;
         this.queryMessageResult = queryMessageResult;
     }
 
     @Override
     public long position() {
-        int pos = byteBufferHeader.position();
+        int pos = this.byteBufferHeader.position();
         List<ByteBuffer> messageBufferList = this.queryMessageResult.getMessageBufferList();
         for (ByteBuffer bb : messageBufferList) {
             pos += bb.position();
@@ -50,25 +53,26 @@ public class QueryMessageTransfer extends AbstractReferenceCounted implements Fi
 
     @Override
     public long transfered() {
-        return transferred;
+        return this.transferred;
     }
 
     @Override
     public long count() {
-        return byteBufferHeader.limit() + this.queryMessageResult.getBufferTotalSize();
+        return this.byteBufferHeader.limit() + this.queryMessageResult.getBufferTotalSize();
     }
 
     @Override
-    public long transferTo(WritableByteChannel target, long position) throws IOException {
+    public long transferTo(final WritableByteChannel target,
+                           final long position) throws IOException {
         if (this.byteBufferHeader.hasRemaining()) {
-            transferred += target.write(this.byteBufferHeader);
-            return transferred;
+            this.transferred += target.write(this.byteBufferHeader);
+            return this.transferred;
         } else {
             List<ByteBuffer> messageBufferList = this.queryMessageResult.getMessageBufferList();
             for (ByteBuffer bb : messageBufferList) {
                 if (bb.hasRemaining()) {
-                    transferred += target.write(bb);
-                    return transferred;
+                    this.transferred += target.write(bb);
+                    return this.transferred;
                 }
             }
         }
@@ -83,5 +87,47 @@ public class QueryMessageTransfer extends AbstractReferenceCounted implements Fi
     @Override
     protected void deallocate() {
         this.queryMessageResult.release();
+    }
+
+    /********************* 4.1.x netty modify *******************/
+    
+    /**
+     * @see io.netty.channel.FileRegion#transferred()
+     */
+    @Override
+    public long transferred() {
+        return 0;
+    }
+
+    /**
+     * @see io.netty.channel.FileRegion#retain()
+     */
+    @Override
+    public FileRegion retain() {
+        return null;
+    }
+
+    /**
+     * @see io.netty.channel.FileRegion#retain(int)
+     */
+    @Override
+    public FileRegion retain(final int increment) {
+        return null;
+    }
+
+    /**
+     * @see io.netty.channel.FileRegion#touch()
+     */
+    @Override
+    public FileRegion touch() {
+        return null;
+    }
+
+    /**
+     * @see io.netty.channel.FileRegion#touch(java.lang.Object)
+     */
+    @Override
+    public FileRegion touch(final Object hint) {
+        return null;
     }
 }
